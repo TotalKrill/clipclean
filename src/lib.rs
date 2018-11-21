@@ -10,7 +10,6 @@ pub fn clean_urlold<'a>( url: &url::Url ) -> Option<String> {
         };
         if should_clean {
 
-            println!("{}", url);
             println!("Discusting url, cleaning");
             if let Some(query) = url.query() {
                 let decoded = percent_decode(query.as_bytes()).decode_utf8();
@@ -32,7 +31,7 @@ pub fn clean_urlold<'a>( url: &url::Url ) -> Option<String> {
     None
 }
 
-const keys_to_clean: [&'static str; 3] = {[
+const KEYS_TO_CLEAN: [&'static str; 3] = {[
 "fbclid",
 "custlinkid",
 "gclid",
@@ -44,14 +43,12 @@ pub fn clean_query<'a>( url: &url::Url ) -> url::Url {
     newurl.query_pairs_mut().clear();
 
     for (key, value) in pairs {
-        if keys_to_clean.contains(&key.as_ref()) {
+        if KEYS_TO_CLEAN.contains(&key.as_ref()) {
             println!("key found: {:?}", key);
         } else {
-            println!("key not found: {:?}", key);
             newurl.query_pairs_mut().append_pair(&key, &value);
         }
     }
-    println!("new: {:?}", newurl);
     newurl
 }
 
@@ -63,13 +60,12 @@ pub fn clean_url<'a>( url: &url::Url ) -> Option<String> {
             _ => false,
         };
         if should_clean {
+            println!("{}", url);
+            println!("Discusting url, cleaning");
             let pairs = url.query_pairs();
             for (key, value) in pairs {
                 if key == "u" {
-                    println!("{:?}", value);
-                    if let Ok(mut url) = Url::parse(&value) {
-                        println!("{}", url);
-                        println!("Discusting url, cleaning");
+                    if let Ok(url) = Url::parse(&value) {
                         return Some(clean_query(&url).to_string());
                     }
                 }

@@ -21,7 +21,7 @@ fn main() {
             };
 
             if let Some(clean) = cleaned {
-                println!("cleaned: {}", clean);
+                println!("Cleaned: {}", clean);
                 let _ = ctx.set_contents(clean);
             }
         }
