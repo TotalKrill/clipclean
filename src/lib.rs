@@ -57,6 +57,7 @@ pub fn clean_url<'a>( url: &url::Url ) -> Option<String> {
     if let Some(domain) = url.domain() {
         let should_clean = match domain {
             "l.facebook.com" => true,
+            "l.messenger.com" => true,
             _ => false,
         };
         if should_clean {
