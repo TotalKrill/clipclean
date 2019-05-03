@@ -6,6 +6,7 @@ edition = "2018"
 description = "Deletes facebook messenger links when in clipboard"
 license = "MIT"
 repository = "https://github.com/TotalKrill/clipclean"
+readme = "Readme.md"
 
 [dependencies]
 clipboard = "0.5.0"
