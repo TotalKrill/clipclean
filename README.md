@@ -3,6 +3,8 @@
 [![Latest version](https://img.shields.io/crates/v/clipclean.svg)](https://crates.io/crates/clipclean)
 ![License](https://img.shields.io/crates/l/clipclean.svg)
 
+![Screenshot](./clipclean.jpg)
+
 If you copy paste a messenger link while this program is running, it will remove the facebook
 tracker and click ids from the link by modifying the clipboard content.
 
@@ -15,4 +17,10 @@ Copying a link without clipclean from messenger:
 Same link with clipclean:
 
     https://www.wired.com/story/facebook-scandals-2018/?
+
+## Installation and running
+
+    cargo install clipclean
+    clipclean
+
 
