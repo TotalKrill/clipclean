@@ -12,15 +12,16 @@ const KEYS_TO_CLEAN: [&'static str; 3] = {[
 "gclid",
 ]};
 
-const DOMAINS_TO_CLEAN: [ CleanInformation<'static>; 3 ] = {[
+const DOMAINS_TO_CLEAN: [ CleanInformation<'static>; 4 ] = {[
             CleanInformation {domain: "l.facebook.com", path: "/l.php", querykey: "u"},
             CleanInformation {domain: "l.messenger.com", path: "/l.php", querykey: "u"},
             CleanInformation {domain: "www.google.com", path: "/url", querykey: "q"},
+            CleanInformation {domain: "external.fbma2-1.fna.fbcdn.net", path: "/safe_image.php", querykey: "url"},
 ]};
 
 
 // remove the click-id and similar query that can sometimes come hidden inside links
-pub fn clean_query<'a>( url: &url::Url ) -> url::Url {
+fn clean_query<'a>( url: &url::Url ) -> url::Url {
     let pairs = url.query_pairs();
     let mut newurl = url.clone();
     newurl.query_pairs_mut().clear();
@@ -62,6 +63,18 @@ pub fn clean_url<'a>( url: &url::Url ) -> Option<String> {
 	}
     }
     None
+}
+
+
+pub fn try_clean_string( url_string: String ) -> String {
+
+    if let Ok(parsed) = Url::parse(&url_string) {
+        if let Some(clean) = clean_url(&parsed) {
+            return clean;
+        }
+    }
+
+    url_string
 }
 
 
@@ -108,6 +121,16 @@ mod tests {
     fn clean_google_meeting() {
         let url = "https://www.google.com/url?q=https://meet.lync.com/skydrive3m-mmm/random/random&sa=D&ust=1560944361951000&usg=AOvVaw2hCRSIX_WKpRFxeczL2S0g";
         let url_clean = "https://meet.lync.com/skydrive3m-mmm/random/random?";
+        let parsed = Url::parse(&url).unwrap();
+        let clean = clean_url(&parsed).unwrap();
+
+        assert_eq!(clean, url_clean);
+
+    }
+    #[test]
+    fn clean_facebook_image() {
+        let url = "https://external.fbma2-1.fna.fbcdn.net/safe_image.php?d=AQBOrzUTFofcxXN7&w=960&h=960&url=https%3A%2F%2Fi.redd.it%2F4wao306sl9931.jpg&_nc_hash=AQDTUf7UFz8PtUsf";
+        let url_clean = "https://i.redd.it/4wao306sl9931.jpg?";
         let parsed = Url::parse(&url).unwrap();
         let clean = clean_url(&parsed).unwrap();
 
