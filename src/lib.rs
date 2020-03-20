@@ -6,22 +6,40 @@ pub struct CleanInformation<'a> {
     querykey: &'a str,
 }
 
-const KEYS_TO_CLEAN: [&'static str; 3] = {[
-"fbclid",
-"custlinkid",
-"gclid",
-]};
+const KEYS_TO_CLEAN: [&'static str; 3] = { ["fbclid", "custlinkid", "gclid"] };
 
-const DOMAINS_TO_CLEAN: [ CleanInformation<'static>; 4 ] = {[
-            CleanInformation {domain: "l.facebook.com", path: "/l.php", querykey: "u"},
-            CleanInformation {domain: "l.messenger.com", path: "/l.php", querykey: "u"},
-            CleanInformation {domain: "www.google.com", path: "/url", querykey: "q"},
-            CleanInformation {domain: "external.fbma2-1.fna.fbcdn.net", path: "/safe_image.php", querykey: "url"},
-]};
-
+const DOMAINS_TO_CLEAN: [CleanInformation<'static>; 5] = {
+    [
+        CleanInformation {
+            domain: "l.facebook.com",
+            path: "/l.php",
+            querykey: "u",
+        },
+        CleanInformation {
+            domain: "l.messenger.com",
+            path: "/l.php",
+            querykey: "u",
+        },
+        CleanInformation {
+            domain: "www.google.com",
+            path: "/url",
+            querykey: "url",
+        },
+        CleanInformation {
+            domain: "www.google.com",
+            path: "/url",
+            querykey: "q",
+        },
+        CleanInformation {
+            domain: "external.fbma2-1.fna.fbcdn.net",
+            path: "/safe_image.php",
+            querykey: "url",
+        },
+    ]
+};
 
 // remove the click-id and similar query that can sometimes come hidden inside links
-fn clean_query<'a>( url: &url::Url ) -> url::Url {
+fn clean_query<'a>(url: &url::Url) -> url::Url {
     let pairs = url.query_pairs();
     let mut newurl = url.clone();
     newurl.query_pairs_mut().clear();
@@ -36,38 +54,32 @@ fn clean_query<'a>( url: &url::Url ) -> url::Url {
     newurl
 }
 
-
 /// try to extract the destination url from the link if possible and also try to remove the click-id
 /// query parameters that are available
-pub fn clean_url<'a>( url: &url::Url ) -> Option<String> {
-
+pub fn clean_url<'a>(url: &url::Url) -> Option<String> {
     if let Some(domain) = url.domain() {
-	if let Some(domaininfo) = DOMAINS_TO_CLEAN.iter().find(|&x| x.domain == domain)
-	{
-	    if domaininfo.path == url.path() {
+        if let Some(domaininfo) = DOMAINS_TO_CLEAN.iter().find(|&x| x.domain == domain) {
+            if domaininfo.path == url.path() {
                 println!("{}", url);
-	        println!("Discusting url, cleaning");
-		let pairs = url.query_pairs();
-		for (key, value) in pairs {
-		    if key == domaininfo.querykey {
-			if let Ok(url) = Url::parse(&value) {
-			    return Some(clean_query(&url).to_string());
-			}
-		    }
-		}
-	    }
-        }
-	else {
+                println!("Discusting url, cleaning");
+                let pairs = url.query_pairs();
+                for (key, value) in pairs {
+                    if key == domaininfo.querykey {
+                        if let Ok(url) = Url::parse(&value) {
+                            return Some(clean_query(&url).to_string());
+                        }
+                    }
+                }
+            }
+        } else {
             //println!("Url is clean");
-	    Some( clean_query(&url).to_string() );
-	}
+            Some(clean_query(&url).to_string());
+        }
     }
     None
 }
 
-
-pub fn try_clean_string( url_string: String ) -> String {
-
+pub fn try_clean_string(url_string: String) -> String {
     if let Ok(parsed) = Url::parse(&url_string) {
         if let Some(clean) = clean_url(&parsed) {
             return clean;
@@ -76,7 +88,6 @@ pub fn try_clean_string( url_string: String ) -> String {
 
     url_string
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -91,7 +102,6 @@ mod tests {
         let clean = clean_url(&parsed).unwrap();
 
         assert_eq!(clean, youtube_clean);
-
     }
 
     #[test]
@@ -103,18 +113,17 @@ mod tests {
         let clean = clean_url(&parsed).unwrap();
 
         assert_eq!(clean, url_clean);
-
     }
     #[test]
     fn clean_messenger() {
         let url_dirty ="https://l.messenger.com/l.php?u=https%3A%2F%2Fwww.reddit.com%2Fr%2FDnD%2Fcomments%2Fbzi1oq%2Fart_two_dragons_and_adopted_kobold_son%2F&h=AT3-avlfmolqmJ6-F1idHcFN3Mc6-qXDHj-IeV67w1ngQrk8M12v1UgS2sQnqaTxdFpoYKOoGH-JgwxojgF7g5dvIxamd6fWC2sSWuumpAcr9TZKwES5r5Fcq2U";
-        let url_clean = "https://www.reddit.com/r/DnD/comments/bzi1oq/art_two_dragons_and_adopted_kobold_son/?";
+        let url_clean =
+            "https://www.reddit.com/r/DnD/comments/bzi1oq/art_two_dragons_and_adopted_kobold_son/?";
 
         let parsed = Url::parse(&url_dirty).unwrap();
         let clean = clean_url(&parsed).unwrap();
 
         assert_eq!(clean, url_clean);
-
     }
 
     #[test]
@@ -125,7 +134,6 @@ mod tests {
         let clean = clean_url(&parsed).unwrap();
 
         assert_eq!(clean, url_clean);
-
     }
     #[test]
     fn clean_facebook_image() {
@@ -135,6 +143,5 @@ mod tests {
         let clean = clean_url(&parsed).unwrap();
 
         assert_eq!(clean, url_clean);
-
     }
 }
