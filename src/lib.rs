@@ -76,7 +76,6 @@ impl<'a> UrlCleaner<'a> {
         let mut modified = false;
 
         for (key, value) in pairs {
-            println!("key: {}, value: {}", key, value);
             if self.tracker_query_keys.contains(&key.as_ref().to_string()) {
                 println!("key found: {:?}", key);
                 modified = true;
@@ -92,19 +91,14 @@ impl<'a> UrlCleaner<'a> {
     /// the content is untouched, return None
     pub fn clean_url(&self, url: &url::Url) -> Option<String> {
         if let Some(domain) = url.domain() {
-            // Check all rules that matches this domain
+            // Check all rules that matches this domain, but return on the first clean
             for domaininfo in self.cleaning_info.iter().filter(|&x| x.domain == domain) {
                 if domaininfo.path == url.path() {
                     println!("{}", url);
                     println!("Discusting url, cleaning");
                     let pairs = url.query_pairs();
-                    println!("pairs: {:?}", pairs);
                     // First search all the queries for the link querykey
                     for (key, value) in pairs {
-                        println!(
-                            "key: {}, value: {}, domainkey: {}",
-                            key, value, domaininfo.querykey
-                        );
                         if key.as_ref() == domaininfo.querykey {
                             if let Ok(url) = Url::parse(&value) {
                                 // Before returning, remove any click identifier as well
