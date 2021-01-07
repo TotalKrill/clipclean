@@ -1,13 +1,22 @@
 use url::*;
 
+/// Contains directives on how to extract the link from a click-tracking link forwarder.
 pub struct CleanInformation<'a> {
+    /// The domain which is used to forward
     domain: &'a str,
+    /// The path at the given domain that will the tracking-url will send tracking information to
     path: &'a str,
+    /// The query parameter that the actual link of interest is sent as
     querykey: &'a str,
 }
 
-const KEYS_TO_CLEAN: [&'static str; 3] = { ["fbclid", "custlinkid", "gclid"] };
+/// When these keys are part of the url query parameters, they will be removed from the link
+/// So that if the parameters contain something like "www.example.com/foo?param1=bar&fbclid=1234",
+/// the resulting query string will become something simlar to "www.example.com/foo?param1=bar"
+/// with the click id query parameter "fbclid" removed
+const KEYS_TO_CLEAN: [&'static str; 3] = ["fbclid", "custlinkid", "gclid"];
 
+/// Five commonly used tracking forwarders that are going to be cleaned
 const DOMAINS_TO_CLEAN: [CleanInformation<'static>; 5] = {
     [
         CleanInformation {
@@ -38,55 +47,92 @@ const DOMAINS_TO_CLEAN: [CleanInformation<'static>; 5] = {
     ]
 };
 
-// remove the click-id and similar query that can sometimes come hidden inside links
-fn clean_query<'a>(url: &url::Url) -> url::Url {
-    let pairs = url.query_pairs();
-    let mut newurl = url.clone();
-    newurl.query_pairs_mut().clear();
+pub struct UrlCleaner<'a> {
+    /// Information on how to obtain the link from a tracking link
+    cleaning_info: Vec<CleanInformation<'a>>,
 
-    for (key, value) in pairs {
-        if KEYS_TO_CLEAN.contains(&key.as_ref()) {
-            println!("key found: {:?}", key);
-        } else {
-            newurl.query_pairs_mut().append_pair(&key, &value);
-        }
-    }
-    newurl
+    /// list of known tracking query keys
+    tracker_query_keys: Vec<String>,
 }
 
-/// try to extract the destination url from the link if possible and also try to remove the click-id
-/// query parameters that are available
-pub fn clean_url<'a>(url: &url::Url) -> Option<String> {
-    if let Some(domain) = url.domain() {
-        if let Some(domaininfo) = DOMAINS_TO_CLEAN.iter().find(|&x| x.domain == domain) {
-            if domaininfo.path == url.path() {
-                println!("{}", url);
-                println!("Discusting url, cleaning");
-                let pairs = url.query_pairs();
-                for (key, value) in pairs {
-                    if key == domaininfo.querykey {
-                        if let Ok(url) = Url::parse(&value) {
-                            return Some(clean_query(&url).to_string());
+impl<'a> Default for UrlCleaner<'a> {
+    fn default() -> Self {
+        let cleaning_info = DOMAINS_TO_CLEAN.into();
+        let tracker_query_keys = KEYS_TO_CLEAN.iter().map(|s| s.to_string()).collect();
+
+        Self {
+            cleaning_info,
+            tracker_query_keys,
+        }
+    }
+}
+
+impl<'a> UrlCleaner<'a> {
+    // remove the click-id and similar query that can sometimes come hidden inside links
+    fn clean_query(&self, url: &url::Url) -> (url::Url, bool) {
+        let pairs = url.query_pairs();
+        let mut newurl = url.clone();
+        newurl.query_pairs_mut().clear();
+        let mut modified = false;
+
+        for (key, value) in pairs {
+            println!("key: {}, value: {}", key, value);
+            if self.tracker_query_keys.contains(&key.as_ref().to_string()) {
+                println!("key found: {:?}", key);
+                modified = true;
+            } else {
+                newurl.query_pairs_mut().append_pair(&key, &value);
+            }
+        }
+        (newurl, modified)
+    }
+
+    /// try to extract the destination url from the link if possible and also try to remove the click-id
+    /// query parameters that are available, if the content has been modified return Some, or if
+    /// the content is untouched, return None
+    pub fn clean_url(&self, url: &url::Url) -> Option<String> {
+        if let Some(domain) = url.domain() {
+            // Check all rules that matches this domain
+            for domaininfo in self.cleaning_info.iter().filter(|&x| x.domain == domain) {
+                if domaininfo.path == url.path() {
+                    println!("{}", url);
+                    println!("Discusting url, cleaning");
+                    let pairs = url.query_pairs();
+                    println!("pairs: {:?}", pairs);
+                    // First search all the queries for the link querykey
+                    for (key, value) in pairs {
+                        println!(
+                            "key: {}, value: {}, domainkey: {}",
+                            key, value, domaininfo.querykey
+                        );
+                        if key.as_ref() == domaininfo.querykey {
+                            if let Ok(url) = Url::parse(&value) {
+                                // Before returning, remove any click identifier as well
+                                return Some(self.clean_query(&url).0.to_string());
+                            }
                         }
                     }
                 }
             }
-        } else {
             //println!("Url is clean");
-            Some(clean_query(&url).to_string());
+            // Check if there is a click identifier, and return if there is one
+            let (url, modified) = self.clean_query(&url);
+            if modified {
+                return Some(url.to_string());
+            }
         }
-    }
-    None
-}
-
-pub fn try_clean_string(url_string: String) -> String {
-    if let Ok(parsed) = Url::parse(&url_string) {
-        if let Some(clean) = clean_url(&parsed) {
-            return clean;
-        }
+        None
     }
 
-    url_string
+    pub fn try_clean_string(&self, url_string: String) -> String {
+        if let Ok(parsed) = Url::parse(&url_string) {
+            if let Some(clean) = self.clean_url(&parsed) {
+                return clean;
+            }
+        }
+
+        url_string
+    }
 }
 
 #[cfg(test)]
@@ -99,7 +145,8 @@ mod tests {
         let youtube_clean = "https://www.youtube.com/watch?v=uBKajwUM5v4";
 
         let parsed = Url::parse(&youtube_dirty).unwrap();
-        let clean = clean_url(&parsed).unwrap();
+        let cleaner = UrlCleaner::default();
+        let clean = cleaner.clean_url(&parsed).unwrap();
 
         assert_eq!(clean, youtube_clean);
     }
@@ -110,7 +157,8 @@ mod tests {
         let url_clean = "https://www.banggood.com/XT30-V3-ParaBoard-Parallel-Charging-Board-Banana-Plug-For-iMax-B6-Charger-p-1235388.html?p=JQ191716342021201711";
 
         let parsed = Url::parse(&url_dirty).unwrap();
-        let clean = clean_url(&parsed).unwrap();
+        let cleaner = UrlCleaner::default();
+        let clean = cleaner.clean_url(&parsed).unwrap();
 
         assert_eq!(clean, url_clean);
     }
@@ -121,7 +169,8 @@ mod tests {
             "https://www.reddit.com/r/DnD/comments/bzi1oq/art_two_dragons_and_adopted_kobold_son/?";
 
         let parsed = Url::parse(&url_dirty).unwrap();
-        let clean = clean_url(&parsed).unwrap();
+        let cleaner = UrlCleaner::default();
+        let clean = cleaner.clean_url(&parsed).unwrap();
 
         assert_eq!(clean, url_clean);
     }
@@ -131,7 +180,8 @@ mod tests {
         let url = "https://www.google.com/url?q=https://meet.lync.com/skydrive3m-mmm/random/random&sa=D&ust=1560944361951000&usg=AOvVaw2hCRSIX_WKpRFxeczL2S0g";
         let url_clean = "https://meet.lync.com/skydrive3m-mmm/random/random?";
         let parsed = Url::parse(&url).unwrap();
-        let clean = clean_url(&parsed).unwrap();
+        let cleaner = UrlCleaner::default();
+        let clean = cleaner.clean_url(&parsed).unwrap();
 
         assert_eq!(clean, url_clean);
     }
@@ -140,7 +190,8 @@ mod tests {
         let url = "https://external.fbma2-1.fna.fbcdn.net/safe_image.php?d=AQBOrzUTFofcxXN7&w=960&h=960&url=https%3A%2F%2Fi.redd.it%2F4wao306sl9931.jpg&_nc_hash=AQDTUf7UFz8PtUsf";
         let url_clean = "https://i.redd.it/4wao306sl9931.jpg?";
         let parsed = Url::parse(&url).unwrap();
-        let clean = clean_url(&parsed).unwrap();
+        let cleaner = UrlCleaner::default();
+        let clean = cleaner.clean_url(&parsed).unwrap();
 
         assert_eq!(clean, url_clean);
     }
