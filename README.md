@@ -25,7 +25,14 @@ originally from one of their chats.
 
 ## Installation and running
 
+This assumes that cargo is installed on your system, and in your path, as well as the cargo binary
+folder is in your path.
+
     cargo install clipclean
     clipclean
+
+### Windows
+
+    cargo install --no-default-features clipclean
 
 
