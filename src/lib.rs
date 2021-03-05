@@ -1,5 +1,16 @@
 use url::*;
 
+pub struct Example<'a> {
+    dirty: &'a str,
+    clean: &'a str,
+}
+
+impl<'a> Example<'a> {
+    pub const fn new(dirty: &'a str, clean: &'a str) -> Self {
+        Self { dirty, clean }
+    }
+}
+
 /// Contains directives on how to extract the link from a click-tracking link forwarder.
 pub struct CleanInformation<'a> {
     /// The domain which is used to forward
@@ -8,6 +19,9 @@ pub struct CleanInformation<'a> {
     path: &'a str,
     /// The query parameter that the actual link of interest is sent as
     querykey: &'a str,
+
+    #[allow(unused)]
+    example: Option<Example<'a>>,
 }
 
 /// When these keys are part of the url query parameters, they will be removed from the link
@@ -17,37 +31,73 @@ pub struct CleanInformation<'a> {
 const KEYS_TO_CLEAN: [&'static str; 3] = ["fbclid", "custlinkid", "gclid"];
 
 /// Five commonly used tracking forwarders that are going to be cleaned
-const DOMAINS_TO_CLEAN: [CleanInformation<'static>; 6] = {
+const DOMAINS_TO_CLEAN: [CleanInformation<'static>; 7] = {
     [
         CleanInformation {
             domain: "l.facebook.com",
             path: "/l.php",
             querykey: "u",
+            example: Some(
+                Example::new("https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DuBKajwUM5v4%26fbclid%3DIwAR0fqKqv6CeHBG0xbnI7KyYNSkFpGpVpfSynXjFXBPFQcErCqLRLgVbfYYw&h=AT01YUWDOjvNW9S09aDSRAZQZk6L55-JZGswiFa1SY6c8_mGQC0VMlNf4HXZhjdJH4PuqdNHctfOmMqISuBRBD10xZ_gIKCnwBGkAV3mrNdTtb7t6QMgyD0GzH3PSCPHmmZGyMBHCRjZ",
+                    "https://www.youtube.com/watch?v=uBKajwUM5v4")),
         },
         CleanInformation {
             domain: "l.messenger.com",
             path: "/l.php",
             querykey: "u",
+            example: Some(
+                Example::new(
+                    "https://l.messenger.com/l.php?u=https%3A%2F%2Fwww.reddit.com%2Fr%2FDnD%2Fcomments%2Fbzi1oq%2Fart_two_dragons_and_adopted_kobold_son%2F&h=AT3-avlfmolqmJ6-F1idHcFN3Mc6-qXDHj-IeV67w1ngQrk8M12v1UgS2sQnqaTxdFpoYKOoGH-JgwxojgF7g5dvIxamd6fWC2sSWuumpAcr9TZKwES5r5Fcq2U",
+                    "https://www.reddit.com/r/DnD/comments/bzi1oq/art_two_dragons_and_adopted_kobold_son/?")
+                ),
         },
         CleanInformation {
             domain: "www.google.com",
             path: "/url",
             querykey: "url",
+            example: Some(
+                Example::new(
+                    "https://www.google.com/url?q=https://meet.lync.com/skydrive3m-mmm/random/random&sa=D&ust=1560944361951000&usg=AOvVaw2hCRSIX_WKpRFxeczL2S0g",
+                    "https://meet.lync.com/skydrive3m-mmm/random/random?")
+                ),
         },
         CleanInformation {
             domain: "www.google.com",
             path: "/url",
             querykey: "q",
+            example: None
         },
         CleanInformation {
             domain: "external.fbma2-1.fna.fbcdn.net",
             path: "/safe_image.php",
             querykey: "url",
+            example: Some(
+                Example::new(
+                    "https://external.fbma2-1.fna.fbcdn.net/safe_image.php?d=AQBOrzUTFofcxXN7&w=960&h=960&url=https%3A%2F%2Fi.redd.it%2F4wao306sl9931.jpg&_nc_hash=AQDTUf7UFz8PtUsf",
+                    "https://i.redd.it/4wao306sl9931.jpg?"
+                    )
+                ),
         },
         CleanInformation {
             domain: "www.youtube.com",
             path: "/redirect",
             querykey: "q",
+            example: Some(
+                Example::new(
+                    "https://www.youtube.com/redirect?event=live_chat&redir_token=QUFFLUhqblp5SDEzMjVCbERUaVFEVkhXdjNuTjdiekZkUXxBQ3Jtc0tuMWtxcjlrbGhyZWljMzl4dkdNNjkyNUt2NE1sOUV4cjBRcm5aeEF3RUZjcDF6dkJ1RHQ2LVVIeERnQzJLbVZZT0RxTFhYeWRsODRwbnZ2dWI1Um50WU1rcTgzR2lMVzhiamdQOFdpNWZFVUJXaXhGdw&q=https%3A%2F%2Fforms.gle%2FQDyXJVu6x24UYErEA",
+                    "https://forms.gle/QDyXJVu6x24UYErEA?"
+                )
+            ),
+        },
+        CleanInformation {
+            domain: "eur02.safelinks.protection.outlook.com",
+            path: "/",
+            querykey: "url",
+            example: Some(
+                Example::new(
+                    "https://eur02.safelinks.protection.outlook.com/?url=http%3A%2F%2Fwww.regitart.se%2FDefault.aspx&data=04%7C01%7C%7C7a84ea493a30461aacd508d8d7df66dc%7C5453408ba6cd4c1e8b1018b500fb544e%7C1%7C0%7C637496701799123652%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&sdata=8nhnhqaKZveiKxfB72T%2B%2BDHr8ZJvedKJ5oHUAhwP8DY%3D&reserved=0",
+                    "http://www.regitart.se/Default.aspx?")
+            ),
         },
     ]
 };
@@ -140,14 +190,14 @@ mod tests {
 
     #[test]
     fn clean_facebook() {
-        let youtube_dirty ="https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DuBKajwUM5v4%26fbclid%3DIwAR0fqKqv6CeHBG0xbnI7KyYNSkFpGpVpfSynXjFXBPFQcErCqLRLgVbfYYw&h=AT01YUWDOjvNW9S09aDSRAZQZk6L55-JZGswiFa1SY6c8_mGQC0VMlNf4HXZhjdJH4PuqdNHctfOmMqISuBRBD10xZ_gIKCnwBGkAV3mrNdTtb7t6QMgyD0GzH3PSCPHmmZGyMBHCRjZ";
-        let youtube_clean = "https://www.youtube.com/watch?v=uBKajwUM5v4";
+        let url_dirty ="https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DuBKajwUM5v4%26fbclid%3DIwAR0fqKqv6CeHBG0xbnI7KyYNSkFpGpVpfSynXjFXBPFQcErCqLRLgVbfYYw&h=AT01YUWDOjvNW9S09aDSRAZQZk6L55-JZGswiFa1SY6c8_mGQC0VMlNf4HXZhjdJH4PuqdNHctfOmMqISuBRBD10xZ_gIKCnwBGkAV3mrNdTtb7t6QMgyD0GzH3PSCPHmmZGyMBHCRjZ";
+        let url_clean = "https://www.youtube.com/watch?v=uBKajwUM5v4";
 
-        let parsed = Url::parse(&youtube_dirty).unwrap();
+        let parsed = Url::parse(&url_dirty).unwrap();
         let cleaner = UrlCleaner::default();
         let clean = cleaner.clean_url(&parsed).unwrap();
 
-        assert_eq!(clean, youtube_clean);
+        assert_eq!(clean, url_clean);
     }
 
     #[test]
@@ -178,6 +228,7 @@ mod tests {
     fn clean_google_meeting() {
         let url = "https://www.google.com/url?q=https://meet.lync.com/skydrive3m-mmm/random/random&sa=D&ust=1560944361951000&usg=AOvVaw2hCRSIX_WKpRFxeczL2S0g";
         let url_clean = "https://meet.lync.com/skydrive3m-mmm/random/random?";
+
         let parsed = Url::parse(&url).unwrap();
         let cleaner = UrlCleaner::default();
         let clean = cleaner.clean_url(&parsed).unwrap();
@@ -203,5 +254,32 @@ mod tests {
         let clean = cleaner.clean_url(&parsed).unwrap();
 
         assert_eq!(clean, url_clean);
+    }
+
+    #[test]
+    fn clean_teams_link() {
+        let url = "https://eur02.safelinks.protection.outlook.com/?url=http%3A%2F%2Fwww.regitart.se%2FDefault.aspx&data=04%7C01%7C%7C7a84ea493a30461aacd508d8d7df66dc%7C5453408ba6cd4c1e8b1018b500fb544e%7C1%7C0%7C637496701799123652%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&sdata=8nhnhqaKZveiKxfB72T%2B%2BDHr8ZJvedKJ5oHUAhwP8DY%3D&reserved=0";
+        let url_clean = "http://www.regitart.se/Default.aspx?";
+        let parsed = Url::parse(&url).unwrap();
+        let cleaner = UrlCleaner::default();
+        let clean = cleaner.clean_url(&parsed).unwrap();
+
+        assert_eq!(clean, url_clean);
+    }
+
+    #[test]
+    fn test_all_examples() {
+        for cleaner in &DOMAINS_TO_CLEAN {
+            if let Some(example) = &cleaner.example {
+                let url_dirty = &example.dirty;
+                let url_clean = &example.clean;
+
+                let parsed = Url::parse(&url_dirty).unwrap();
+                let cleaner = UrlCleaner::default();
+                let clean = cleaner.clean_url(&parsed).unwrap();
+
+                assert_eq!(&clean, url_clean);
+            }
+        }
     }
 }
