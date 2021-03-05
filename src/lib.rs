@@ -17,7 +17,7 @@ pub struct CleanInformation<'a> {
 const KEYS_TO_CLEAN: [&'static str; 3] = ["fbclid", "custlinkid", "gclid"];
 
 /// Five commonly used tracking forwarders that are going to be cleaned
-const DOMAINS_TO_CLEAN: [CleanInformation<'static>; 5] = {
+const DOMAINS_TO_CLEAN: [CleanInformation<'static>; 6] = {
     [
         CleanInformation {
             domain: "l.facebook.com",
@@ -43,6 +43,11 @@ const DOMAINS_TO_CLEAN: [CleanInformation<'static>; 5] = {
             domain: "external.fbma2-1.fna.fbcdn.net",
             path: "/safe_image.php",
             querykey: "url",
+        },
+        CleanInformation {
+            domain: "www.youtube.com",
+            path: "/redirect",
+            querykey: "q",
         },
     ]
 };
@@ -183,6 +188,16 @@ mod tests {
     fn clean_facebook_image() {
         let url = "https://external.fbma2-1.fna.fbcdn.net/safe_image.php?d=AQBOrzUTFofcxXN7&w=960&h=960&url=https%3A%2F%2Fi.redd.it%2F4wao306sl9931.jpg&_nc_hash=AQDTUf7UFz8PtUsf";
         let url_clean = "https://i.redd.it/4wao306sl9931.jpg?";
+        let parsed = Url::parse(&url).unwrap();
+        let cleaner = UrlCleaner::default();
+        let clean = cleaner.clean_url(&parsed).unwrap();
+
+        assert_eq!(clean, url_clean);
+    }
+    #[test]
+    fn clean_youtube_chat_link() {
+        let url = "https://www.youtube.com/redirect?event=live_chat&redir_token=QUFFLUhqblp5SDEzMjVCbERUaVFEVkhXdjNuTjdiekZkUXxBQ3Jtc0tuMWtxcjlrbGhyZWljMzl4dkdNNjkyNUt2NE1sOUV4cjBRcm5aeEF3RUZjcDF6dkJ1RHQ2LVVIeERnQzJLbVZZT0RxTFhYeWRsODRwbnZ2dWI1Um50WU1rcTgzR2lMVzhiamdQOFdpNWZFVUJXaXhGdw&q=https%3A%2F%2Fforms.gle%2FQDyXJVu6x24UYErEA";
+        let url_clean = "https://forms.gle/QDyXJVu6x24UYErEA?";
         let parsed = Url::parse(&url).unwrap();
         let cleaner = UrlCleaner::default();
         let clean = cleaner.clean_url(&parsed).unwrap();
